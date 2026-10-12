@@ -1,0 +1,110 @@
+/*
+ * Penknife UI. Every class starts with pk- so nothing leaks into Basecamp.
+ * Most of the look comes from Basecamp's own classes (btn, action-sheet);
+ * this file only adds layout, and uses Basecamp's CSS variables for colour,
+ * radius and shadow so it follows Basecamp's theme.
+ */
+
+/* ---- Sticky contents button (doc-nav) ---------------------------------- */
+
+.pk-toc.action-sheet {
+  position: fixed;
+  z-index: 30; /* under Basecamp's sticky toolbar (40) and its trays */
+  max-inline-size: min(32rem, 40vw);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-0.4rem);
+  transition: opacity 150ms ease, transform 150ms ease, visibility 0s linear 150ms;
+}
+.pk-toc.pk-toc--visible {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition: opacity 150ms ease, transform 150ms ease, visibility 0s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pk-toc.action-sheet { transition: none; transform: none; }
+}
+
+.pk-toc .pk-toc__trigger.btn {
+  max-inline-size: 100%;
+  gap: 0.6rem;
+  padding-inline: 1rem 0.8rem;
+  background: var(--color-canvas-light, #fff);
+  box-shadow: var(--shadow-md);
+}
+.pk-toc__trigger .svg-icon { flex-shrink: 0; opacity: 0.66; }
+.pk-toc__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Basecamp's action-sheet opens to the right edge; ours opens down from the left. */
+.pk-toc.action-sheet .pk-toc__menu.action-sheet__content {
+  inset-block-start: calc(100% + 0.6rem);
+  inset-inline: 0 auto;
+  min-inline-size: 24rem;
+  max-inline-size: min(40rem, 80vw);
+  max-block-size: min(60vh, 56rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.pk-toc.action-sheet .pk-toc__menu.action-sheet__content::before { display: none; }
+/* Bridge the gap between button and menu so hover does not drop. */
+.pk-toc.expanded::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 100%;
+  block-size: 0.8rem;
+}
+
+.pk-toc .pk-toc__item.action-sheet__action { flex-shrink: 0; }
+.pk-toc .pk-toc__item--h3.action-sheet__action { padding-inline-start: 2rem; }
+.pk-toc .pk-toc__item--h4.action-sheet__action { padding-inline-start: 3.2rem; }
+.pk-toc .pk-toc__item--h3.action-sheet__action,
+.pk-toc .pk-toc__item--h4.action-sheet__action { color: var(--color-text-subtle); }
+.pk-toc .pk-toc__item--current.action-sheet__action {
+  background-color: var(--tint-ink-5, var(--tint-ink-10));
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+/* ---- Toast ---------------------------------------------------------------- */
+
+.pk-toast {
+  position: fixed;
+  inset-inline-start: 50%;
+  inset-block-end: 6.4rem;
+  z-index: 100;
+  padding: 0.8rem 1.4rem;
+  border-radius: var(--radius-lg, 0.8rem);
+  background: var(--color-ink, #29353c);
+  color: var(--color-canvas-light, #fff);
+  font-size: 1.4rem;
+  line-height: 1.4;
+  opacity: 0;
+  transform: translate(-50%, 0.6rem);
+  transition: opacity 200ms ease, transform 200ms ease;
+  pointer-events: none;
+}
+.pk-toast--in { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---- Hidden frame used to print the PDF ---------------------------------- */
+
+.pk-print-frame {
+  position: fixed;
+  inset-inline-end: 0;
+  inset-block-end: 0;
+  inline-size: 800px;
+  block-size: 600px;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@media print {
+  .pk-toc, .pk-toast { display: none !important; }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "penknife",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Small tools for Basecamp, as a Chrome extension.",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "zip": "rm -f penknife.zip && zip -r penknife.zip manifest.json icons src -x '.*'"
+  },
+  "devDependencies": {
+    "jsdom": "^26.0.0"
+  }
+}
