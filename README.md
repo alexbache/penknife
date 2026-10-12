@@ -13,9 +13,13 @@ colours, so they look like part of Basecamp.
 
 ### Doc headings
 
-When you scroll down a doc, a button with the current heading stays at the
-top left. Hover it to see every heading in the doc, and click one to go
-there. The button updates as you scroll.
+A heading navigator sits in Basecamp's left margin, with **Back to top**. It
+shows the heading you are reading and updates as you scroll. Hover it to see
+every heading in the doc, and click one to go there.
+
+It follows Basecamp's layout: in a wide window it is a button beside the doc;
+in a narrower window it becomes a vertical tab on the doc's left edge, like
+the "The client can see…" tab on the right.
 
 | Key | Action |
 | --- | --- |

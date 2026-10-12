@@ -15,6 +15,8 @@
   const tools = [];
   let active = []; // { tool, cleanup }
   let currentUrl = null;
+  // Ignore the #hash: jumping to a heading must not rebuild the page's tools.
+  const pageUrl = () => location.href.split("#")[0];
 
   const Penknife = {
     register(tool) {
@@ -27,7 +29,7 @@
       document.addEventListener("turbo:load", refresh);
       // Remove our UI before Turbo caches the page, or a stale copy comes back.
       document.addEventListener("turbo:before-cache", unmountAll);
-      window.addEventListener("popstate", refresh);
+      window.addEventListener("popstate", heal);
       setInterval(heal, 750);
       refresh();
     },
@@ -69,7 +71,7 @@
   }
 
   function refresh() {
-    currentUrl = location.href;
+    currentUrl = pageUrl();
     unmountAll();
     active = tools.filter((t) => safe(() => t.matches(), false)).map((tool) => ({
       tool,
@@ -80,7 +82,7 @@
   // Re-mount when the URL changed without a Turbo event, or when Basecamp
   // re-rendered part of the page and took our UI with it.
   function heal() {
-    if (location.href !== currentUrl) return refresh();
+    if (pageUrl() !== currentUrl) return refresh();
     if (active.some(({ tool }) => tool.alive && !safe(() => tool.alive(), true))) refresh();
   }
 

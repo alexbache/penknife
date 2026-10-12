@@ -5,33 +5,29 @@
  * radius and shadow so it follows Basecamp's theme.
  */
 
-/* ---- Sticky contents button (doc-nav) ---------------------------------- */
+/* ---- Heading navigator (doc-nav) -----------------------------------------
+ * Sits in Basecamp's left margin with "Back to top". Two layouts, switched by
+ * doc-nav.js from Basecamp's own breakpoints:
+ *   .pk-toc--rail  wide: a ghost button beside the page, like "Back to top"
+ *   .pk-toc--edge  narrow: a vertical tab on the page's left edge, mirroring
+ *                  the yellow "The client can see…" tab on the right edge
+ */
 
 .pk-toc.action-sheet {
   position: fixed;
   z-index: 30; /* under Basecamp's sticky toolbar (40) and its trays */
-  max-inline-size: min(32rem, 40vw);
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-0.4rem);
-  transition: opacity 150ms ease, transform 150ms ease, visibility 0s linear 150ms;
+  display: flex;
 }
-.pk-toc.pk-toc--visible {
-  opacity: 1;
-  visibility: visible;
-  transform: none;
-  transition: opacity 150ms ease, transform 150ms ease, visibility 0s;
-}
-@media (prefers-reduced-motion: reduce) {
-  .pk-toc.action-sheet { transition: none; transform: none; }
-}
+.pk-toc.action-sheet[hidden] { display: none; }
 
 .pk-toc .pk-toc__trigger.btn {
+  /* Same treatment as Basecamp's "Back to top" button. */
+  --btn-background-color: var(--tint-ink-3);
+  --btn-background-color-hover: var(--tint-ink-10);
+  min-inline-size: 0;
   max-inline-size: 100%;
   gap: 0.6rem;
-  padding-inline: 1rem 0.8rem;
-  background: var(--color-canvas-light, #fff);
-  box-shadow: var(--shadow-md);
+  color: var(--color-ink);
 }
 .pk-toc__trigger .svg-icon { flex-shrink: 0; opacity: 0.66; }
 .pk-toc__label {
@@ -40,24 +36,43 @@
   white-space: nowrap;
 }
 
-/* Basecamp's action-sheet opens to the right edge; ours opens down from the left. */
+/* Wide: button in the margin, its right edge a gutter away from the page. */
+.pk-toc--rail.action-sheet { justify-content: flex-end; margin-block-start: 0.4rem; }
+
+/* Narrow: vertical tab hanging off the page's left edge. */
+.pk-toc--edge.action-sheet { translate: -100% 0; }
+.pk-toc--edge .pk-toc__trigger.btn {
+  --btn-background-color: var(--color-canvas, #fff);
+  --btn-background-color-hover: var(--color-canvas, #fff);
+  writing-mode: vertical-rl;
+  rotate: 180deg; /* read bottom-to-top, facing the page */
+  /* Physical sizes: in vertical writing mode "inline" means height. */
+  width: var(--toolbar-badge-size, 2.4rem);
+  height: auto;
+  max-height: min(40vh, 32rem);
+  padding: 1ch 0;
+  border-radius: 0 var(--4px, 0.4rem) var(--4px, 0.4rem) 0; /* rotated: rounds the outer side */
+  font-size: var(--text-14, 1.4rem);
+  font-weight: 500;
+}
+.pk-toc--edge .pk-toc__trigger .svg-icon { rotate: 90deg; }
+
+/* Menu: Basecamp's action-sheet, re-anchored for our position. */
 .pk-toc.action-sheet .pk-toc__menu.action-sheet__content {
-  inset-block-start: calc(100% + 0.6rem);
-  inset-inline: 0 auto;
   min-inline-size: 24rem;
   max-inline-size: min(40rem, 80vw);
-  max-block-size: min(60vh, 56rem);
+  max-block-size: min(70vh, 64rem);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 .pk-toc.action-sheet .pk-toc__menu.action-sheet__content::before { display: none; }
-/* Bridge the gap between button and menu so hover does not drop. */
-.pk-toc.expanded::after {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  inset-block-start: 100%;
-  block-size: 0.8rem;
+.pk-toc--rail.action-sheet .pk-toc__menu.action-sheet__content {
+  inset-block-start: calc(100% + 0.6rem);
+  inset-inline: 0 auto;
+}
+.pk-toc--edge.action-sheet .pk-toc__menu.action-sheet__content {
+  inset-block-start: 0;
+  inset-inline: calc(100% + 0.6rem) auto;
 }
 
 .pk-toc .pk-toc__item.action-sheet__action { flex-shrink: 0; }

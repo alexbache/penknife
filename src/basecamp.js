@@ -19,6 +19,11 @@
   const TOOLBAR = ".perma-toolbar";
   const TOOLBAR_ACTIONS = ".perma-toolbar__actions";
   const BOOKMARK = "turbo-frame[id^='bookmark_quick_toggle']";
+  // The white page card, and the "Back to top" button in the left margin.
+  const CARD = "main.perma";
+  const BACK_TO_TOP = ".back-to-top";
+  // The "Home" button pinned at the window's top-left.
+  const HOME_LINK = ".nav__home-link";
   // Parts of the rendered doc that are page chrome, not content.
   const CHROME_SELECTORS = [".heading__link", ".attachment__buttons", ".hidden\\@print"].join(", ");
 
@@ -36,6 +41,26 @@
 
     toolbar() {
       return document.querySelector(TOOLBAR);
+    },
+
+    card() {
+      return document.querySelector(CARD);
+    },
+
+    homeLink() {
+      return document.querySelector(HOME_LINK);
+    },
+
+    // How Basecamp is laying out its left margin right now, read from its own
+    // "Back to top" button so we follow Basecamp's breakpoints exactly:
+    //   "rail"   – wide: the button sits in the margin with its text showing
+    //   "edge"   – narrow: the button shrinks to an arrow at the window edge
+    //   "hidden" – small screens: Basecamp hides it
+    leftMargin() {
+      const btt = document.querySelector(BACK_TO_TOP);
+      if (!btt || getComputedStyle(btt).display === "none") return "hidden";
+      const label = btt.querySelector("button > span");
+      return label && getComputedStyle(label).display !== "none" ? "rail" : "edge";
     },
 
     // Where to put a toolbar button so it sits just left of "Bookmark".

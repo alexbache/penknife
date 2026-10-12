@@ -1,17 +1,16 @@
 // Doc navigation.
 //
-// A sticky "current heading" button sits top-left of the doc once you scroll
-// past the title. Hover (or click) it to see every heading; pick one to jump
-// there. Keys: j/k for next/previous heading, ]/[ for next/previous doc in
-// the same folder.
+// A "current heading" navigator sits in Basecamp's left margin, beside the
+// doc. Hover (or click) it to see every heading; pick one to jump there.
+// Keys: j/k for next/previous heading, ]/[ for next/previous doc in the
+// same folder.
 (function () {
   "use strict";
 
   const BC = window.PenknifeBasecamp;
   const { icon, html, toast } = window.Penknife;
 
-  const GAP = 12; // space between Basecamp's sticky toolbar and our button
-  const CLOSE_DELAY = 180; // ms, so the menu does not flicker when the pointer crosses the gap
+  const GAP = 12; // space between Basecamp's sticky toolbar and a heading we jump to
 
   const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const toolbarBottom = () => (BC.toolbar() ? BC.toolbar().getBoundingClientRect().bottom : 0);
@@ -45,24 +44,31 @@
     else if (dir < 0) window.scrollTo({ top: 0, behavior: reduceMotion() ? "auto" : "smooth" });
   }
 
-  // ---- sticky contents button ------------------------------------------------
+  // ---- heading navigator ----------------------------------------------------
+  //
+  // Lives in Basecamp's left margin, the same track as "Back to top":
+  //   rail – wide windows: a button beside the doc, level with the toolbar
+  //   edge – narrow windows: a vertical tab on the doc's left edge, like the
+  //          yellow "The client can see…" tab on the right edge
+  // It follows Basecamp's own breakpoints (see PenknifeBasecamp.leftMargin).
 
-  let toc = null; // { root, label, items, headings, onScroll, onResize }
+  const GUTTER = 12; // Basecamp's --back-to-top-gap
+  const HOVER_GRACE = 250; // ms before closing, so the pointer can cross gaps
+
+  let toc = null; // { root, schedule }
 
   function mountToc() {
     const headings = BC.docHeadings();
-    const article = BC.article();
-    if (!headings.length || !article) return;
+    if (!headings.length || !BC.card()) return;
 
     const root = html(`
-      <div class="pk-toc action-sheet">
-        <button type="button" class="btn btn--sm pk-toc__trigger" aria-haspopup="true" aria-expanded="false">
+      <nav class="pk-toc action-sheet" aria-label="Headings in this doc">
+        <button type="button" class="btn btn--ghost btn--sm pk-toc__trigger" aria-haspopup="true" aria-expanded="false">
           ${icon("list")}
           <span class="pk-toc__label"></span>
-          ${icon("chevron-down")}
         </button>
-        <div class="action-sheet__content pk-toc__menu" role="menu" aria-label="Headings in this doc"></div>
-      </div>`);
+        <div class="action-sheet__content pk-toc__menu" role="menu"></div>
+      </nav>`);
     const trigger = root.querySelector(".pk-toc__trigger");
     const label = root.querySelector(".pk-toc__label");
     const menu = root.querySelector(".pk-toc__menu");
@@ -82,51 +88,86 @@
       return item;
     });
 
-    // Open on hover, and on click/keyboard for touch and keyboard users.
+    // Hover opens it. Leaving starts a short timer, and the timer only closes
+    // the menu if the pointer is not back over the button or menu by then.
     let closeTimer = null;
+    let openedAt = 0;
+    const isOpen = () => root.classList.contains("expanded");
     const open = () => {
       clearTimeout(closeTimer);
+      if (isOpen()) return;
+      openedAt = Date.now();
       root.classList.add("expanded");
       trigger.setAttribute("aria-expanded", "true");
       const current = menu.querySelector(".pk-toc__item--current");
-      if (current) current.scrollIntoView({ block: "nearest" });
+      if (current) menu.scrollTop = current.offsetTop - menu.clientHeight / 2 + current.offsetHeight / 2;
     };
     const close = () => {
       clearTimeout(closeTimer);
       root.classList.remove("expanded");
       trigger.setAttribute("aria-expanded", "false");
     };
-    root.addEventListener("mouseenter", open);
-    root.addEventListener("mouseleave", () => {
-      closeTimer = setTimeout(close, CLOSE_DELAY);
+    const closeSoon = () => {
+      clearTimeout(closeTimer);
+      closeTimer = setTimeout(() => {
+        if (!root.matches(":hover") && !root.contains(document.activeElement)) close();
+      }, HOVER_GRACE);
+    };
+    root.addEventListener("pointerenter", (e) => e.pointerType === "mouse" && open());
+    root.addEventListener("pointerleave", (e) => e.pointerType === "mouse" && closeSoon());
+    // Click and keyboard still work, for touch screens and keyboard users.
+    // A mouse click lands just after hover opened the menu; keep it open then.
+    trigger.addEventListener("click", () => {
+      if (!isOpen()) open();
+      else if (Date.now() - openedAt > 600) close();
     });
-    trigger.addEventListener("click", () => (root.classList.contains("expanded") ? close() : open()));
     root.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        close();
-        trigger.focus();
-      }
+      if (e.key !== "Escape") return;
+      close();
+      trigger.focus();
     });
     root.addEventListener("focusout", (e) => {
-      if (!root.contains(e.relatedTarget)) close();
+      if (!root.contains(e.relatedTarget) && !root.matches(":hover")) close();
     });
+    const onOutsideClick = (e) => !root.contains(e.target) && close();
+    document.addEventListener("click", onOutsideClick);
 
     let frame = 0;
     const update = () => {
       frame = 0;
-      const header = article.querySelector(".perma-header") || article.firstElementChild;
-      const line = toolbarBottom();
-      // Show once the doc title has scrolled under the toolbar, hide past the doc's end.
-      const visible = header.getBoundingClientRect().bottom < line && article.getBoundingClientRect().bottom > line + 120;
-      root.classList.toggle("pk-toc--visible", visible);
-      if (!visible) close();
+      const mode = BC.leftMargin();
+      root.classList.toggle("pk-toc--rail", mode === "rail");
+      root.classList.toggle("pk-toc--edge", mode === "edge");
+      root.hidden = mode === "hidden";
+      if (root.hidden) return close();
 
       const i = currentIndex(headings);
-      label.textContent = i >= 0 ? BC.headingText(headings[i]) : BC.docTitle();
+      const text = i >= 0 ? BC.headingText(headings[i]) : BC.docTitle();
+      if (label.textContent !== text) label.textContent = text;
+      trigger.title = `${text} — all headings`;
       items.forEach((item, n) => item.classList.toggle("pk-toc__item--current", n === i));
 
-      root.style.top = `${line + GAP}px`;
-      root.style.left = `${article.getBoundingClientRect().left}px`;
+      // Line up with the top of Basecamp's toolbar, beside the page card.
+      const card = BC.card().getBoundingClientRect();
+      const toolbar = BC.toolbar() ? BC.toolbar().getBoundingClientRect() : card;
+      const viewport = document.documentElement.clientWidth;
+      if (mode === "rail") {
+        root.style.left = "";
+        root.style.right = `${viewport - card.left + GUTTER}px`;
+        root.style.maxWidth = `${Math.max(card.left - GUTTER * 2, 0)}px`;
+      } else {
+        root.style.right = "";
+        root.style.left = `${card.left}px`;
+        root.style.maxWidth = "";
+      }
+      // Keep clear of Basecamp's "Home" button when the toolbar sticks to the top.
+      let top = Math.max(toolbar.top, 0);
+      const home = BC.homeLink();
+      if (home) {
+        const h = home.getBoundingClientRect();
+        if (h.right > root.getBoundingClientRect().left) top = Math.max(top, h.bottom + GUTTER / 2);
+      }
+      root.style.top = `${top}px`;
     };
     const schedule = () => frame || (frame = requestAnimationFrame(update));
 
@@ -135,13 +176,22 @@
     window.addEventListener("resize", schedule);
     update();
 
-    toc = { root, schedule };
+    toc = {
+      root,
+      schedule,
+      teardown() {
+        clearTimeout(closeTimer);
+        cancelAnimationFrame(frame);
+        document.removeEventListener("click", onOutsideClick);
+      },
+    };
   }
 
   function unmountToc() {
     if (!toc) return;
     window.removeEventListener("scroll", toc.schedule);
     window.removeEventListener("resize", toc.schedule);
+    toc.teardown();
     toc.root.remove();
     toc = null;
   }
